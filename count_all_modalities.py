@@ -15,15 +15,14 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-from gen_argparse import *
 from my_functions import *
 
 
 ### Populate dictionary with all days used in database
 start_end_dict = {
     'H1': [['2019-11-26',' 2019-12-25']], 
-    # 'H2': [['2019-03-13', '2019-03-29']], 
-    'H2': [['2019-03-13', '2019-03-15']], # smaller subset for testing 
+    'H2': [['2019-03-13', '2019-03-29']], 
+    # 'H2': [['2019-03-13', '2019-03-15']], # smaller subset for testing 
     'H3': [['2019-07-23', '2019-08-04'], ['2019-08-15', '2019-09-05']], 
     'H4': [['2019-05-01', '2019-05-12'], ['2019-05-17', '2019-05-21']],
     'H5': [['2019-06-07', '2019-06-21']],
@@ -65,7 +64,6 @@ def count_audio(days_to_use, data_path, hub=None, max_files=8640):
 
     return counts
 
-
 def count_images(days_to_use, data_path, hub=None, max_files=86400):
     print(f'Counting images on {hub}...')
 
@@ -84,22 +82,16 @@ def count_images(days_to_use, data_path, hub=None, max_files=86400):
 
     return counts
 
-# def count_dark(days_to_use, data_path, hub, max_files=86400):
-#     print(f'Counting dark images on {hub}...')
-#     data_path = os.path.join(data_path, f'{H_num}_{hub}_DARKIMAGES')
-#     dates = glob(os.path.join(data_path, '2019-*'))
-#     dates = [f for f in dates if os.path.basename(f).split('_')[0] in days_to_use]
+def read_dark(days_to_use, data_path, hub, max_files=86400):
 
-#     counts = {}
-#     for day in dates:
-#         all_times = pd.read_csv(day)
-#         all_times = all_times.values.tolist()
-#         set_times = set([x[0].split(' ')[1] for x in all_times])
-#         dt = datetime.strptime(os.path.basename(day).split('_')[0], '%Y-%m-%d').date()
-#         totals = len(set_times)/max_files
-#         counts[dt] = float(f'{totals:.2}') if totals != 0 else 0.0
-
-#     return counts
+    img_csv_summary = glob(f'/Volumes/TOSHIBA-22/H2-red/Summaries/H2-{hub}-img-summary.txt')[0]
+    summary_df = pd.read_csv(img_csv_summary, delimiter=' ', usecols=['day', '%Dark'], index_col='day')
+    df_dict = summary_df.to_dict()
+    df_dates, df_perc = df_dict['%Dark'].keys(), df_dict['%Dark'].values()
+    dates = [datetime.strptime(d, '%Y-%m-%d').date() for d in df_dates]
+    counts = {d: p for d, p in zip(dates, df_perc) if d.strftime('%Y-%m-%d') in days_to_use}
+    
+    return counts
 
 
 def count_env(days_to_use, data_path, hub=None, max_seconds=8640):
@@ -139,30 +131,34 @@ def get_count_df(mod_name, mod_lookup, sub_path=None):
 
 if __name__ == '__main__':
 
+    path = '/Volumes/TOSHIBA-22'
+    H_num = 'H2'
+    hubs = ['RS1', 'RS2', 'RS4', 'RS5']
+
     dbDays = database_days()[H_num]
     
     print(f'{H_num}: {len(dbDays)} days')
 
+    dark_counts = get_count_df(sub_path=' ', mod_name='Img_dark', mod_lookup=read_dark)
     env_counts = get_count_df(sub_path='H2-ENVIRONMENTAL', mod_name='Env', mod_lookup=count_env)
     audio_counts = get_count_df(sub_path='H2-AUDIO', mod_name='Audio', mod_lookup=count_audio)
     image_counts = get_count_df(sub_path='H2-IMAGES', mod_name='Img', mod_lookup=count_images)
-    # dark_counts = get_count_df(mod_name='Img_dark', mod_lookup=count_dark)
     print('Done counting.')
 
-    # combined_img = pd.DataFrame()
-    # for col1, col2 in zip(sorted(image_counts.columns), sorted(dark_counts.columns)):
-    #     if col1.split('_')[0] != col2.split('_')[0]:
-    #         print(f'mismatch! Can not combine {col1} and {col2}')
-    #         continue
-    #     combined_img[col1] = image_counts[col1] + dark_counts[col2]
+    combined_img = pd.DataFrame()
+    for col1, col2 in zip(sorted(image_counts.columns), sorted(dark_counts.columns)):
+        if col1.split('_')[0] != col2.split('_')[0]:
+            print(f'mismatch! Can not combine {col1} and {col2}')
+            continue
+        combined_img[col1] = image_counts[col1] + dark_counts[col2]
 
-    # env_counts.to_csv('~/Desktop/env_df_counts.csv')
-    # image_counts.to_csv('~/Desktop/image_df_counts.csv')
-    # audio_counts.to_csv('~/Desktop/audio_df_counts.csv')
-    # dark_counts.to_csv('~/Desktop/dark_df_counts.csv')
+    
+    # env_counts.to_csv(f'~/Desktop/{H_num}_env_df_counts.csv')
+    # image_counts.to_csv(f'~/Desktop/{H_num}_image_df_counts.csv')
+    # audio_counts.to_csv(f'~/Desktop/{H_num}_audio_df_counts.csv')
+    # dark_counts.to_csv(f'~/Desktop/{H_num}_dark_df_counts.csv')
 
-
-    full_counts = pd.concat([audio_counts, image_counts, env_counts], axis=1)
+    full_counts = pd.concat([combined_img, dark_counts, env_counts, audio_counts], axis=1)
     full_counts = full_counts.reindex(sorted(full_counts.columns), axis=1)
 
     full_counts.to_excel(f'~/Desktop/CompleteSummaries/new_summary_code/{H_num}_counts.xlsx')
