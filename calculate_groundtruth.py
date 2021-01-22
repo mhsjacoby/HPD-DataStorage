@@ -11,8 +11,8 @@ and generates full occuapncy profiles for the home.
 -path
     Where to find the data
     e.g.: /Volumes/TOSHIBA-22/H2-red/
--save
-    (optional) Where to store day-wise files 
+-save (optional)
+    Where to store day-wise files 
     e.g.: /Volumes/TOSHIBA-22/hpdmobile_dataset/
 
 
