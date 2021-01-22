@@ -82,13 +82,24 @@ def calculate_groundtruth_df(path):
         occ_df.loc[(occ_df.index >= date) & (occ_df[occ] == 99) & (state1 == 'entered'), occ] = 1
 
     occ_df['occupied'] = occ_df[list(occupants.keys())].max(axis=1)
-    occ_df['number'] = occ_df[list(occupants.keys())].sum(axis=1)
-    
     occ_df.index = pd.to_datetime(occ_df.index)
     occ_df.index.name = 'timestamp'
-    occ_df = occ_df.drop(columns=list(occupants.keys()))
+
+    summary_df = occ_df.copy()
+    summary_df['number'] = summary_df[list(occupants.keys())].sum(axis=1)
+    summary_df = summary_df.drop(columns=list(occupants.keys()))
+    summary_df = create_buffer(summary_df)
     
-    return occ_df
+    return summary_df, occ_df
+
+
+def create_buffer(df, buffer=5):
+    num_points = buffer*6
+    df['occupied'] = df['occupied'].replace(to_replace=0, value=np.nan)
+    df['occupied'] = df['occupied'].fillna(method='ffill', limit=num_points)
+    df['occupied'] = df['occupied'].fillna(method='bfill', limit=num_points)
+    df['occupied'] = df['occupied'].fillna(value=0).astype('int32')
+    return df
 
 
 if __name__ == '__main__':
@@ -105,17 +116,19 @@ if __name__ == '__main__':
     save_root = os.path.join(args.save, f'{H_num}-GROUNDTRUTH') if len(args.save) > 0 else os.path.join(path, 'Inference_DB/GroundTruth')
     save_path = make_storage_directory(save_root)
 
-    occ_df = calculate_groundtruth_df(path)
+    summary_df, occ_df = calculate_groundtruth_df(path)
+
+    occ_save_path = make_storage_directory(os.path.join(path, 'Inference_DB/Full_inferences/'))
+    occ_fname = os.path.join(occ_save_path, f'{H_num}_occupancy_buffer.csv')
+    occ_df.to_csv(occ_fname, index = True)
 
     start_end_file = 'start_end_dates.json'
     all_days = get_date_list(read_file=start_end_file, H_num=H_num)
 
-
     for day in all_days:
-        day_df = occ_df.loc[day]
+        day_df = summary_df.loc[day]
         fname = os.path.join(save_path, f'{day}_{H_num}_groundtruth.csv')
         day_df.to_csv(fname, index=True)
-        print(f'{fname}: Write Successful!')
 
 
 
