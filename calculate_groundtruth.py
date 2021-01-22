@@ -3,9 +3,31 @@ calculate_groundtruth.py
 Author: Maggie Jacoby
 Date: 2021-01-21
 
-This function reads in the raw occupancy files (one per occupant) 
-and generates a full occuapncy profile for the home.
-Prints occupancy profiles for each day
+This file reads in the raw occupancy files (one per occupant) 
+and generates full occuapncy profiles for the home.
+
+
+=== Input ===
+-path
+    Where to find the data
+    e.g.: /Volumes/TOSHIBA-22/H2-red/
+-save
+    (optional) Where to store day-wise files 
+    e.g.: /Volumes/TOSHIBA-22/hpdmobile_dataset/
+
+
+=== Output ===
+Generates two types of files:
+    
+    H2_occupancy_buffer.csv
+        Full (all days combined) occupancy profile
+        has columns for each occupant 
+        has final occupied column with 5 minute buffer
+    
+    2019-03-14_H2_groundtruth.csv
+        Day-wise occupancy profile for specified days
+        only has occupied column and number
+        no buffer included
 """
 
 import os
@@ -129,12 +151,3 @@ if __name__ == '__main__':
         day_df = summary_df.loc[day]
         fname = os.path.join(save_path, f'{day}_{H_num}_groundtruth.csv')
         day_df.to_csv(fname, index=True)
-
-
-
-
-
-
-
-
-
