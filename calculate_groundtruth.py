@@ -19,12 +19,12 @@ and generates full occuapncy profiles for the home.
 === Output ===
 Generates two types of files:
     
-    H2_occupancy_buffer.csv
+    H2_occupancy_buffer.csv (e.g.)
         Full (all days combined) occupancy profile
         has columns for each occupant 
         has final occupied column with 5 minute buffer
     
-    2019-03-14_H2_groundtruth.csv
+    2019-03-14_H2_groundtruth.csv (e.g.)
         Day-wise occupancy profile for specified days
         only has occupied column and number
         no buffer included
