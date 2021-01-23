@@ -116,13 +116,36 @@ def count_env(days_to_use, data_path, hub=None, max_seconds=8640):
 
 
 
+def count_occ(days_to_use, data_path, max_seconds=8640):
+    
+    dates = glob(os.path.join(data_path, '*_groundtruth.csv'))
+    dates = [f for f in dates if os.path.basename(f).split('_')[0] in days_to_use]
+    print(f'Counting occupancy for {len(dates)} days')
+
+    counts = {}
+    for day in dates:
+        cols_to_read = ['timestamp', 'occupied']
+        day_data = pd.read_csv(day, usecols=cols_to_read, index_col='timestamp')
+        dt = datetime.strptime(os.path.basename(day).split('_')[0], '%Y-%m-%d').date()
+        occ_df = day_data.loc[day_data.occupied == 1]
+        totals = len(occ_df)/max_seconds
+        counts[dt] = float(f'{totals:.2}') if totals != 0 else 0.0
+
+    occ_counts = {'Occupancy': counts}
+    occ_counts_df = pd.DataFrame(occ_counts)    
+    print(occ_counts_df)
+
+    return occ_counts_df
+
+
+
 
 
 def get_count_df(mod_name, mod_lookup, sub_path=None):
     counts = {}
     for hub in hubs[:]:
         data_path = os.path.join(path, 'hpdmobile_dataset', sub_path)
-        counts[f'{hub}_{mod_name}'] = mod_lookup(days_to_use=dbDays, data_path=data_path, hub=hub)
+        counts[f'{hub}_{mod_name}'] = mod_lookup(days_to_use=all_days, data_path=data_path, hub=hub)
     df = pd.DataFrame(counts)
     return df
 
@@ -135,9 +158,12 @@ if __name__ == '__main__':
     H_num = 'H2'
     hubs = ['RS1', 'RS2', 'RS4', 'RS5']
 
-    dbDays = database_days()[H_num]
+    all_days = database_days()[H_num]
+
+    # start_end_file = 'start_end_dates.json'
+    # all_days = get_date_list(read_file=start_end_file, H_num=H_num)
     
-    print(f'{H_num}: {len(dbDays)} days')
+    print(f'{H_num}: {len(all_days)} days')
 
     dark_counts = get_count_df(sub_path=' ', mod_name='Img_dark', mod_lookup=read_dark)
     env_counts = get_count_df(sub_path='H2-ENVIRONMENTAL', mod_name='Env', mod_lookup=count_env)
