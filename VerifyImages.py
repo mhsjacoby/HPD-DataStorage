@@ -1,4 +1,17 @@
+"""
+VerifyImages.py
+Author: Maggie Jacoby
 
+Read in image inference files along with ground truth occupancy
+and find locations of false positives (ground truth = vacant, image = occupied)
+
+=== Input ===
+
+
+=== Output ===
+
+
+"""
 
 
 import os
@@ -8,9 +21,6 @@ import pandas as pd
 
 from datetime import datetime
 from glob import glob
-# from natsort import natsorted
-
-# import shutil
 
 from gen_argparse import *
 from my_functions import *
@@ -48,25 +58,22 @@ if __name__ == '__main__':
 
     save_path = make_storage_directory(os.path.join(save_root, 'Summaries'))
 
-    ground_truth_path = glob(os.path.join(path, 'Inference_DB', 'Full_inferences', '*_occupancy.csv'))[0]
+    ground_truth_path = glob(os.path.join(path, 'Inference_DB', 'Full_inferences', f'{H_num}_occupancy.csv'))[0]
     groundTruth = get_df(ground_truth_path)
 
+
+    start_end_file = 'start_end_dates.json'
+    all_days = get_date_list(read_file=start_end_file, H_num=H_num)
+
     all_hub_fps = []
+    
     for hub in hubs:
         infer_csv_path = os.path.join(path, 'Inference_DB', hub, 'img_inf', '*.csv')
-
-        days = [day for day in sorted(glob(infer_csv_path))]
+        days = [day for day in sorted(glob(infer_csv_path)) if os.path.basename(day).strip('.csv') in all_days]
 
         if len(days) == 0:
             print(f'No days in folder: {infer_csv_path}. Exiting program.')
             sys.exit()
-
-        end_date =  os.path.basename(days[-1]).strip('.csv') if not end_date else end_date
-        days = [day for day in days if os.path.basename(day).strip('.csv') <= end_date]
-
-        start_date =  os.path.basename(days[1]).strip('.csv') if not start_date else start_date
-        days = [day for day in days if os.path.basename(day).strip('.csv') >= start_date]
-
 
         print(f'Number of days: {len(days)}')
         dfs = []
@@ -88,3 +95,5 @@ if __name__ == '__main__':
     print(all_fps)
 
     all_fps.to_csv(os.path.join(save_path, f'false_positives_{H_num}.csv'))
+
+

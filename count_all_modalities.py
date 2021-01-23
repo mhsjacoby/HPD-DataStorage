@@ -17,31 +17,32 @@ from gen_argparse import *
 from my_functions import *
 
 
-### Populate dictionary with all days used in database
-start_end_dict = {
-    'H1': [['2019-11-26',' 2019-12-25']], 
-    'H2': [['2019-03-13', '2019-03-29']], 
-    'H3': [['2019-07-23', '2019-08-04'], ['2019-08-15', '2019-09-05']], 
-    # 'H3': [['2019-07-23', '2019-07-25']], 
-    'H4': [['2019-05-01', '2019-05-12'], ['2019-05-17', '2019-05-21']],
-    'H5': [['2019-06-07', '2019-06-21']],
-    'H6': [['2019-10-12', '2019-11-02'], ['2019-11-20', '2019-12-05']]}
+# ### Populate dictionary with all days used in database
+# start_end_dict = {
+#     'H1': [['2019-11-26',' 2019-12-25']], 
+#     'H2': [['2019-03-13', '2019-03-29']], 
+#     'H3': [['2019-07-23', '2019-08-04'], ['2019-08-15', '2019-09-05']], 
+#     'H3': [['2019-07-23', '2019-07-25']], 
+#     'H4': [['2019-05-01', '2019-05-12'], ['2019-05-17', '2019-05-21']],
+#     'H5': [['2019-06-07', '2019-06-21']],
+#     'H6': [['2019-10-12', '2019-11-02'], ['2019-11-20', '2019-12-05']]
+#     }
 
-def database_days():
-    all_days_dict = {}
+# def database_days():
+#     all_days_dict = {}
 
-    for home in start_end_dict:
-        home_st = start_end_dict[home]
-        all_days = []
+#     for home in start_end_dict:
+#         home_st = start_end_dict[home]
+#         all_days = []
 
-        for st in home_st:
-            start, end = st[0], st[1]
-            pd_days = pd.date_range(start=start, end=end).tolist()
-            days = [d.strftime('%Y-%m-%d') for d in pd_days]
-            all_days.extend(days)
-        all_days_dict[home] = all_days
+#         for st in home_st:
+#             start, end = st[0], st[1]
+#             pd_days = pd.date_range(start=start, end=end).tolist()
+#             days = [d.strftime('%Y-%m-%d') for d in pd_days]
+#             all_days.extend(days)
+#         all_days_dict[home] = all_days
     
-    return all_days_dict
+#     return all_days_dict
 
 ################
 
@@ -65,6 +66,7 @@ def count_images(days_to_use, data_path, hub=None, max_files=86400):
     print(f'Counting images on {hub}...')
     dates = glob(os.path.join(data_path, '2019-*'))
     dates = [f for f in dates if os.path.basename(f) in days_to_use]
+    print('num days: ', len(dates))
 
     counts = {}
     for day in dates:
@@ -79,6 +81,7 @@ def count_images(days_to_use, data_path, hub=None, max_files=86400):
 def count_dark(days_to_use, data_path, hub, max_files=86400):
     print(f'Counting dark images on {hub}...')
     data_path = os.path.join(data_path, f'{H_num}_{hub}_DARKIMAGES')
+    # print(data_path)
     dates = glob(os.path.join(data_path, '2019-*'))
     dates = [f for f in dates if os.path.basename(f).split('_')[0] in days_to_use]
 
@@ -111,6 +114,27 @@ def count_env(days_to_use, data_path, hub=None, max_seconds=8640):
 
     return counts
 
+def count_occ(days_to_use, data_path, max_seconds=8640):
+    
+    dates = glob(os.path.join(data_path, '*_groundtruth.csv'))
+    dates = [f for f in dates if os.path.basename(f).split('_')[0] in days_to_use]
+    print(f'Counting occupancy for {len(dates)} days')
+
+    counts = {}
+    for day in dates:
+        cols_to_read = ['timestamp', 'occupied']
+        day_data = pd.read_csv(day, usecols=cols_to_read, index_col='timestamp')
+        dt = datetime.strptime(os.path.basename(day).split('_')[0], '%Y-%m-%d').date()
+        occ_df = day_data.loc[day_data.occupied == 1]
+        totals = len(occ_df)/max_seconds
+        counts[dt] = float(f'{totals:.2}') if totals != 0 else 0.0
+
+    occ_counts = {'Occupancy': counts}
+    occ_counts_df = pd.DataFrame(occ_counts)    
+    print(occ_counts_df)
+
+    return occ_counts_df
+
 
 
 
@@ -122,8 +146,9 @@ def get_count_df(mod_name, mod_lookup, sub_path=None):
             data_path = os.path.join(path, hub, sub_path)
         else:
             data_path = os.path.join(path, hub)
-        counts[f'{hub}_{mod_name}'] = mod_lookup(days_to_use=dbDays, data_path=data_path, hub=hub)
+        counts[f'{hub}_{mod_name}'] = mod_lookup(days_to_use=all_days, data_path=data_path, hub=hub)
     df = pd.DataFrame(counts)
+    print(df)
     return df
 
 
@@ -131,13 +156,19 @@ def get_count_df(mod_name, mod_lookup, sub_path=None):
 
 if __name__ == '__main__':
 
-    dbDays = database_days()[H_num]
+    # dbDays = database_days()[H_num]
+    start_end_file = 'start_end_dates.json'
+    all_days = get_date_list(read_file=start_end_file, H_num=H_num)
     
-    print(f'{H_num}: {len(dbDays)} days')
+    print(f'{H_num}: {len(all_days)} days')
+
+    occ_path = os.path.join(path, 'GroundTruth/GroundTruth')
+    occ_counts = count_occ(days_to_use=all_days, data_path=occ_path)
 
     env_counts = get_count_df(sub_path='processed_env/CSV-raw', mod_name='Env', mod_lookup=count_env)
     audio_counts = get_count_df(sub_path='processed_audio/audio_csv', mod_name='Audio', mod_lookup=count_audio)
-    image_counts = get_count_df(sub_path='img-downsized', mod_name='Img', mod_lookup=count_images)
+    image_counts = get_count_df(sub_path='img-unpickled', mod_name='Img', mod_lookup=count_images)
+
     dark_counts = get_count_df(mod_name='Img_dark', mod_lookup=count_dark)
     print('Done counting.')
 
@@ -154,7 +185,9 @@ if __name__ == '__main__':
     # dark_counts.to_csv('~/Desktop/dark_df_counts.csv')
 
 
-    full_counts = pd.concat([audio_counts, dark_counts, combined_img, env_counts], axis=1)
+    full_counts = pd.concat([audio_counts, dark_counts, combined_img, env_counts, occ_counts], axis=1)
     full_counts = full_counts.reindex(sorted(full_counts.columns), axis=1)
+    full_counts = full_counts.sort_index()
+    print(full_counts.index)
 
     full_counts.to_excel(f'~/Desktop/CompleteSummaries/new_summary_code/{H_num}_counts.xlsx')
