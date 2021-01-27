@@ -21,18 +21,14 @@ from datetime import datetime, timedelta, time
 from my_functions import *
 
 def read_house_summary(filepath):
-    df = pd.read_excel(filepath)#, sep=' ', header=None)
+    df = pd.read_excel(filepath)
     df.rename(columns={'Unnamed: 0': 'date'}, inplace=True)
     df.index = df['date']
     df.drop(columns=['date'], inplace=True)
     df.fillna(0, inplace=True)
-    
     hubs = set([x.split('_')[0] for x in list(df.columns) if x[1]=='S'])
-    
-    # print(df.columns)
     occ = df['Occupancy'].mean()
-    print(occ)
-    # sys.exit()
+
     mean_list = []
     for hub in sorted(hubs):
         hub_cols = [col for col in df.columns if hub in col]
@@ -82,5 +78,6 @@ if __name__ == '__main__':
     full_summary = pd.concat(all_homes, axis=0)
     occupancy_df = pd.Series(occ_df)
     print(occupancy_df)
+    
     # full_summary.to_csv(os.path.join(save_path, 'new_summary.csv'))
 
