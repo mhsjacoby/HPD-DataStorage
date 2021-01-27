@@ -17,34 +17,6 @@ from gen_argparse import *
 from my_functions import *
 
 
-# ### Populate dictionary with all days used in database
-# start_end_dict = {
-#     'H1': [['2019-11-26',' 2019-12-25']], 
-#     'H2': [['2019-03-13', '2019-03-29']], 
-#     'H3': [['2019-07-23', '2019-08-04'], ['2019-08-15', '2019-09-05']], 
-#     'H3': [['2019-07-23', '2019-07-25']], 
-#     'H4': [['2019-05-01', '2019-05-12'], ['2019-05-17', '2019-05-21']],
-#     'H5': [['2019-06-07', '2019-06-21']],
-#     'H6': [['2019-10-12', '2019-11-02'], ['2019-11-20', '2019-12-05']]
-#     }
-
-# def database_days():
-#     all_days_dict = {}
-
-#     for home in start_end_dict:
-#         home_st = start_end_dict[home]
-#         all_days = []
-
-#         for st in home_st:
-#             start, end = st[0], st[1]
-#             pd_days = pd.date_range(start=start, end=end).tolist()
-#             days = [d.strftime('%Y-%m-%d') for d in pd_days]
-#             all_days.extend(days)
-#         all_days_dict[home] = all_days
-    
-#     return all_days_dict
-
-################
 
 def count_audio(days_to_use, data_path, hub=None, max_files=8640):
     print(f'Counting audio on {hub}...')
@@ -81,10 +53,8 @@ def count_images(days_to_use, data_path, hub=None, max_files=86400):
 def count_dark(days_to_use, data_path, hub, max_files=86400):
     print(f'Counting dark images on {hub}...')
     data_path = os.path.join(data_path, f'{H_num}_{hub}_DARKIMAGES')
-    # print(data_path)
     dates = glob(os.path.join(data_path, '2019-*'))
     dates = [f for f in dates if os.path.basename(f).split('_')[0] in days_to_use]
-
     counts = {}
     for day in dates:
         all_times = pd.read_csv(day)
@@ -160,7 +130,7 @@ if __name__ == '__main__':
     start_end_file = 'start_end_dates.json'
     all_days = get_date_list(read_file=start_end_file, H_num=H_num)
     
-    print(f'{H_num}: {len(all_days)} days')
+    print(f'{H_num}: {len(all_days)} days')    
 
     occ_path = os.path.join(path, 'GroundTruth/GroundTruth')
     occ_counts = count_occ(days_to_use=all_days, data_path=occ_path)
